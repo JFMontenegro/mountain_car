@@ -57,7 +57,13 @@ class QLearningAgent:
         Tip: np.digitize(value, edges) returns the index of the bin a value
         falls into. Tip: the key must be hashable, so build a tuple of ints.
         """
-        raise NotImplementedError("EXERCISE 1a: implement discretize()")
+        keys = []
+        for value, edges in zip(obs, self._bins):
+            index = int(np.digitize(value, edges))
+            keys.append(index)
+        return tuple(keys)
+    
+
 
     def select_action(self, state: tuple, *, deterministic: bool = False) -> int:
         """EXERCISE 1b: epsilon-greedy action selection.
@@ -72,7 +78,11 @@ class QLearningAgent:
         Tip: self.q_table is a defaultdict, so indexing an unseen state is safe
         and returns a zero vector. Tip: np.argmax gives you the best action.
         """
-        raise NotImplementedError("EXERCISE 1b: implement select_action()")
+        if not deterministic and np.random.random() < self.epsilon:
+            return np.random.randint(self.n_actions)
+        values = self.q_table[state]
+        return int(np.argmax(values))
+
 
     def predict(self, obs: np.ndarray, *, deterministic: bool = True) -> tuple[int, None]:
         return self.select_action(self.discretize(obs), deterministic=deterministic), None
@@ -100,7 +110,16 @@ class QLearningAgent:
         Note that `terminated` is NOT the same as "the episode ended" -- see
         the training loop below for why that distinction matters here.
         """
-        raise NotImplementedError("EXERCISE 1c: implement the Q-Learning update")
+        if terminated:
+            target = reward
+        else:
+            next_best_value = np.max(self.q_table[next_state])
+            target = reward + self.gamma * next_best_value
+        
+        current = self.q_table[state][action]
+        error = target - current
+        
+        self.q_table[state][action] = current + self.lr * error
 
     def train(self, total_episodes: int = 10_000, log_interval: int = 100) -> list[float]:
         env = gym.make(self.env_id)
