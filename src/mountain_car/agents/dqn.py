@@ -40,10 +40,16 @@ class QNetwork(nn.Module):
 
     def __init__(self, state_dim: int, action_dim: int, hidden: int = 128) -> None:
         super().__init__()
-        raise NotImplementedError("EXERCISE 2a: build the Q-network")
+        self.network = nn.Sequential(
+            nn.Linear(state_dim, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, action_dim)
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError("EXERCISE 2a: implement forward()")
+        return self.network(x)
 
 
 # ── Replay buffer ────────────────────────────────────────────────────
@@ -96,6 +102,7 @@ class DQNAgent:
         buffer_capacity: int = 100_000,
         target_update_freq: int = 10,
         hidden: int = 128,
+        sticky_prob: float = 0.95
     ) -> None:
         self.env_id = env_id
         self.lr = lr
@@ -107,7 +114,10 @@ class DQNAgent:
         self.buffer_capacity = buffer_capacity
         self.target_update_freq = target_update_freq
         self.hidden = hidden
+        self.sticky_prob = sticky_prob
         self.training_episodes = 0
+
+        self._last_explore_action = None
 
         env = gym.make(env_id)
         self.state_dim = int(env.observation_space.shape[0])  # type: ignore[index]
@@ -146,8 +156,10 @@ class DQNAgent:
         from gentle to nearly-the-answer -- take only as many as you need. Try
         to diagnose it from your own measurements first.
         """
-        if not deterministic and random.random() < self.epsilon:
-            return random.randrange(self.action_dim)
+        if not deterministic and np.random.random() < self.epsilon:
+            if self._last_explore_action is None or np.random.random() >= self.sticky_prob:
+                self._last_explore_action = np.random.randint(0, self.action_dim)
+            return self._last_explore_action
         with torch.no_grad():
             t = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
             return int(self.q_net(t).argmax(dim=1).item())
@@ -197,7 +209,21 @@ class DQNAgent:
         #      Tip: zero_grad() -> backward() -> step(), in that order.
         #
         # Return the scalar loss value (.item()).
-        raise NotImplementedError("EXERCISE 2b: implement the DQN learning step")
+
+        all_q = self.q_net(states_t)
+        current_q = all_q.gather(1, actions_t)
+
+        with torch.no_grad():
+            q_target = self.target_net(next_states_t)
+            next_q = q_target.max(dim=1, keepdim=True).values
+        
+        target_q = rewards_t + self.gamma * next_q * (1.0 - terminateds_t)
+        loss = self.loss_fn(current_q, target_q)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return loss.item()
 
     # ── training loop ─────────────────────────────────────────────────
 
@@ -207,6 +233,7 @@ class DQNAgent:
 
         for episode in range(1, total_episodes + 1):
             obs, _ = env.reset()
+            self._last_explore_action = None
             total_reward = 0.0
             done = False
 
@@ -255,6 +282,7 @@ class DQNAgent:
         "buffer_capacity",
         "target_update_freq",
         "hidden",
+        "sticky_prob",
     )
 
     def save(self, path: Path) -> None:
@@ -295,3 +323,4 @@ class DQNAgent:
             f"  Target update     : every {self.target_update_freq} episodes\n"
             f"  Device            : {self.device}"
         )
+
