@@ -430,7 +430,7 @@ src/mountain_car/
     └── dqn.py              # QNetwork, ReplayBuffer, DQNAgent (ejercicios 2 y 3)
 results/                    # curvas, capturas de evaluación, historiales, métricas
 saves/                      # agentes entrenados
-docs/                       # esquemas dibujados a mano
+docs/                       # esquemas del ciclo de entrenamiento
 EXERCISES.md                # enunciado original de los ejercicios
 ```
 
