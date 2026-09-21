@@ -1,0 +1,22 @@
+[
+  {
+    "agent": "Q-Learning tabular",
+    "episodes": 100,
+    "mean": -130.69,
+    "std": 18.83491173326809,
+    "best": -109.0,
+    "worst": -169.0,
+    "reached": 100,
+    "training_episodes": 30000
+  },
+  {
+    "agent": "DQN",
+    "episodes": 100,
+    "mean": -105.72,
+    "std": 21.32185732997949,
+    "best": -83.0,
+    "worst": -176.0,
+    "reached": 100,
+    "training_episodes": 2500
+  }
+]

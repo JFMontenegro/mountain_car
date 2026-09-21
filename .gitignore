@@ -212,3 +212,6 @@ __marimo__/
 
 # Reference solutions - kept on disk for the instructor, never committed
 solutions/
+
+# Script auxiliar de generacion de evidencia
+scripts/
